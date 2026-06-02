@@ -57,10 +57,9 @@ urgencias_valpo <- urgencias_valpo %>%
 range(urgencias_valpo$fecha)
 
 ## Filtro de duplicados
-duplicados <- duplicated(urgencias_valpo)#cantidad de datos duplicados
-
-urgencias_valpo <- urgencias_valpo %>%
-  distinct()
+duplicados <- duplicated(urgencias_valpo)
+n_duplicados <- sum(duplicados, na.rm = TRUE)
+n_duplicados # No existen duplicados en la data
 
 ## Filtro de comunas Juan Fernández e Isla de Pascua
 urgencias_valpo <- urgencias_valpo %>%
