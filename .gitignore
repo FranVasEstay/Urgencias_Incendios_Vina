@@ -33,6 +33,7 @@ vignettes/*.pdf
 *_cache/
 /cache/
 /Datos/
+/Trash/
 
 # Temporary files created by R markdown
 *.utf8.md
