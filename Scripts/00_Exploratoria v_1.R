@@ -174,6 +174,13 @@ ggplot(diario_comuna, aes(x = fecha, y = total_consultas)) +
 # Hay que quitar Santo Domingo porque no tiene datos para el periodo completo. 
 # Quizás hacer una agregación geográfica (interior, gran valparaíso, litoral central, etc)
 
+# ----- SUBSET COMUNAS ESCOGIDAS ---- #
+# Se va a trabajar mejor con algunas comunas seleccionadas: Valparaíso, Viña del mar, Quilpué, Villa Alemana, Limache, Placilla de Peñuelas.
+selected_comunas <- c("Valparaíso", "Viña del Mar","Quilpué","Villa Alemana","Limache","Placilla de Peñuelas")
+urgencias_subset <-
+  select(urgencias_subset, Comunas in selected_comunas)
+
 # GUARDAR DATOS FILTRADOS
 dir.create("Datos")
-save(urgencias_valpo, file = "Datos/Urgencias_valpo_limpio.RData")
+save(urgencias_valpo, file = "Datos/Urgencias_valpo_limpio.RData") # toda la data
+save(urgencias_subset)
