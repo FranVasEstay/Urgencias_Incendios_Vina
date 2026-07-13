@@ -26,6 +26,8 @@ library(janitor)
 library(httr)      # Para hacer la solicitud HTTP
 library(jsonlite)  # Para procesar la respuesta JSON de la API
 library(ggspatial)
+library(paletteer)
+library(ggrepel) 
 
 ## Definir Directorios 
 dir_data   <- here("Datos")

@@ -8,25 +8,10 @@ library(sandwich)   # Errores estándar robustos (NeweyWest)
 library(lmtest)     # Inferencia estadística (coeftest)
 
 ## Preparación/completitud de la serie
-# 1. SIMULACIÓN DE DATOS (A modo de ejemplo)
-# Supongamos que analizamos "Consultas Totales" en un "Centro Ambulatorio"
-set.seed(123)
-fechas <- seq(as.Date("2023-01-01"), as.Date("2024-06-30"), by = "day")
-datos_crudos <- tibble(
-  fecha = fechas,
-  tipo_centro = "ambulatorio",
-  conteos = rpois(length(fechas), lambda = 150) + 
-    10 * (wday(fechas) %in% 2:6) # Más casos en días hábiles
-)
-# Introducimos algunos valores faltantes aleatorios
-datos_crudos$conteos[sample(1:nrow(datos_crudos), 30)] <- NA 
 
-# 2. CALENDARIO DE FERIADOS (Simulado)
-feriados_oficiales <- as.Date(c("2023-01-01", "2023-04-07", "2023-05-01", 
-                                "2023-09-18", "2023-09-19", "2023-12-25",
-                                "2024-01-01", "2024-03-29", "2024-05-01"))
+# 1. CALENDARIO DE FERIADOS (Simulado)
 
-# 3. GENERACIÓN DE VARIABLES TEMPORALES Y COMPLETITUD
+# 2. VARIABLES TEMPORALES Y COMPLETITUD
 # Comparamos el rango temporal con una secuencia completa
 df_completo <- tibble(fecha = seq(min(datos_crudos$fecha), max(datos_crudos$fecha), by = "day")) %>%
   left_join(datos_crudos, by = "fecha") %>%
@@ -60,7 +45,7 @@ df_filtrado <- df_completo %>%
   )
 
 ## Imputación de valores faltantes remanentes (GAM)
-# 5. MODELADO GAM PARA IMPUTACIÓN
+# MODELADO GAM PARA IMPUTACIÓN
 # Convertir día de la semana a factor para el efecto aleatorio
 df_filtrado$dia_semana_fac <- as.factor(df_filtrado$dia_semana)
 
@@ -69,7 +54,7 @@ modelo_gam <- gam(conteos ~ s(indice_temporal) + s(dia_semana_fac, bs = "re"),
                   family = quasipoisson, 
                   data = df_filtrado)
 
-# 6. PREDICCIÓN E IMPUTACIÓN
+# PREDICCIÓN E IMPUTACIÓN
 df_imputado <- df_filtrado %>%
   mutate(
     pred_gam = predict(modelo_gam, newdata = ., type = "response"),
@@ -80,7 +65,7 @@ df_imputado <- df_filtrado %>%
   )
 
 ## Definición de evento (Series de tiempo interrumpidas)
-# 7. VARIABLES ITS
+# VARIABLES ITS
 fecha_evento <- as.Date("2024-02-02")
 
 df_its <- df_imputado %>%
@@ -97,11 +82,11 @@ df_its <- df_imputado %>%
   )
 
 ## Ajuste del modelo y errores robustos
-# 8. MODELO BINOMIAL NEGATIVO
+# MODELO BINOMIAL NEGATIVO
 modelo_its <- glm.nb(conteos_final ~ indice_temporal + pulse + post + dia_semana_fac + mes, 
                      data = df_its)
 
-# 9. ERRORES ESTÁNDAR ROBUSTOS DE NEWEY-WEST (Rezago de 7 días)
+# ERRORES ESTÁNDAR ROBUSTOS DE NEWEY-WEST (Rezago de 7 días)
 vcov_nw <- NeweyWest(modelo_its, lag = 7, prewhite = FALSE)
 
 # Inferencia estadística basada en errores robustos
@@ -109,7 +94,7 @@ tabla_coeficientes <- coeftest(modelo_its, vcov. = vcov_nw)
 print(tabla_coeficientes) # Aquí revisas los p-values robustos
 
 ## Generación de predicciones y contrafactual
-# 10. MATRICES DE DISEÑO PARA PREDICCIÓN
+# MATRICES DE DISEÑO PARA PREDICCIÓN
 # Matriz Observada
 X_obs <- model.matrix(modelo_its)
 
