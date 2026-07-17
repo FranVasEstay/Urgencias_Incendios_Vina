@@ -1,13 +1,13 @@
 # =============================================================================
 # TESIS: Mega incendio Viña del Mar-Valparaíso 2024 y consultas de urgencia
 # Diseño: Series de tiempo interrumpidas (ITS) con regresión Binomial Negativa
-# Repositorio: [GitHub - Enlace a tu repositorio público]
+# Repositorio: [GitHub - https://github.com/FranVasEstay/Urgencias_Incendios_Vina.git]
 # =============================================================================
 
 # ==============================================================================
 # A. DATOS DE URGENCIAS PARA COMUNAS SELECCIONADAS
 # ==============================================================================
-load(file.path(dir_data, "Urgencias_valpo_selected.RData"))
+load(file.path(dir_data, "Processed/Urgencias_valpo_selected.RData"))
 
 # ==============================================================================
 # B. DATOS CARTOGRAFÍA MAPA 
@@ -45,7 +45,7 @@ if(is.na(st_crs(limites))) {
 #zip_path <- file.path(dir_mapa, "cigiden_fire_zone.zip")
 #download.file(file_url, zip_path, mode = "wb") # Descargar
 #unzip(zip_path, exdir = dir_mapa) # Descomprimir
-file.remove(zip_path) #Remover
+#file.remove(zip_path) #Remover
 shp_list <- list.files(dir_mapa, pattern = "\\.shp$", full.names = TRUE, recursive = TRUE) # Leer shapefile
 incendio_shape <- read_sf(shp_list[grepl("cigiden|incendio", shp_list, ignore.case = TRUE)][1]) %>%
   clean_names()
@@ -67,7 +67,30 @@ establecimientos_raw<- read_sf(file.path(dir_mapa, "l_910_v1_establecimientos_de
 establecimientos_valpo <- establecimientos_raw %>%
   filter(cod_reg == 5)
 
-# Carga y preparación de los datos
-#mp25
-#meteo
-#feriados
+# ==============================================================================
+# E. DATOS DE MP2.5 SINCA
+# ==============================================================================
+load("Datos/Processed/MP25.RData")
+
+# ==============================================================================
+# F. DATOS METEOROLÓGICOS
+# ==============================================================================
+meteo_raw <- readxl::read_excel("data/raw/meteorologia/dmc_valpo_2023_2025.xlsx",
+                                 sheet = 1)
+
+# ==============================================================================
+# G. CALENDARIO DE FERIADOS
+# ==============================================================================
+url <- "https://apis.digital.gob.cl/fl/feriados"
+feriados_raw <- GET(url) %>% 
+  content("text") %>% 
+  fromJSON(simplifyDataFrame = TRUE)
+
+# Filtrar los años de interés
+feriados_chile <- feriados_raw %>%
+  filter(as.Date(fecha) >= "2023-02-01" & 
+         as.Date(fecha) <= "2025-02-28") %>%
+  mutate(fecha = as.Date(fecha))
+
+rm(feriados_raw)
+
