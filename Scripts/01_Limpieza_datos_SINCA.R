@@ -6,7 +6,7 @@
 
 # -------- LIMPIEZA DE DATOS SINCA --------- #
 
-mp25_raw <- read.csv2("Datos/pm25vina.csv", 
+mp25_raw <- read.csv2("Datos/Raw/SINCA/pm25vina.csv", 
                        fileEncoding = "UTF-8")
 
 mp25_diario <- mp25_raw %>%
@@ -30,10 +30,11 @@ mp25_diario <- mp25_raw %>%
          fecha <= as.Date("2025-02-28")) %>%
   
   # 4. Combinar validado + preliminar: prioriza validado, luego preliminar
+  # Anotar esto en la metodología: "Se prioriza el registro validado, y en su ausencia se utiliza el preliminar"
   mutate(mp25 = coalesce(mp25_validado, mp25_preliminar))
 
 # Gráfico rápido de control
-ggplot(mp25_limpio, aes(x = fecha, y = mp25)) +
+ggplot(mp25_diario, aes(x = fecha, y = mp25)) +
   geom_line(na.rm = TRUE) +
   geom_vline(xintercept = as.Date("2024-02-02"), 
              linetype = "dashed", color = "darkred") +

@@ -46,7 +46,8 @@ if(is.na(st_crs(limites))) {
 #download.file(file_url, zip_path, mode = "wb") # Descargar
 #unzip(zip_path, exdir = dir_mapa) # Descomprimir
 #file.remove(zip_path) #Remover
-shp_list <- list.files(dir_mapa, pattern = "\\.shp$", full.names = TRUE, recursive = TRUE) # Leer shapefile
+dir_incendio <- file.path(dir_mapa, "Incendios 2024") 
+shp_list <- list.files(dir_incendio, pattern = "\\.shp$", full.names = TRUE, recursive = TRUE) # Leer shapefile
 incendio_shape <- read_sf(shp_list[grepl("cigiden|incendio", shp_list, ignore.case = TRUE)][1]) %>%
   clean_names()
 if(exists("incendio_shape")) {
@@ -81,16 +82,21 @@ meteo_raw <- readxl::read_excel("data/raw/meteorologia/dmc_valpo_2023_2025.xlsx"
 # ==============================================================================
 # G. CALENDARIO DE FERIADOS
 # ==============================================================================
-url <- "https://apis.digital.gob.cl/fl/feriados"
-feriados_raw <- GET(url) %>% 
-  content("text") %>% 
-  fromJSON(simplifyDataFrame = TRUE)
+lineas_ics <- readLines("Datos/calendario_2025.ics", encoding = "UTF-8")
 
-# Filtrar los años de interés
-feriados_chile <- feriados_raw %>%
-  filter(as.Date(fecha) >= "2023-02-01" & 
-         as.Date(fecha) <= "2025-02-28") %>%
-  mutate(fecha = as.Date(fecha))
+# Extraer líneas que comienzan con DTSTART y SUMMARY
+fechas_str <- grep("^DTSTART", lineas_ics, value = TRUE)
+nombres_str <- grep("^SUMMARY", lineas_ics, value = TRUE)
 
-rm(feriados_raw)
+# Limpiar
+fechas <- gsub("DTSTART;VALUE=DATE:", "", fechas_str)  # Formato: 20230101
+nombres <- gsub("SUMMARY:", "", nombres_str)
 
+feriados_chile <- data.frame(
+  fecha = as.Date(fechas, format = "%Y%m%d"),
+  nombre = nombres
+) %>%
+  filter(fecha >= as.Date("2023-02-01") & fecha <= as.Date("2025-02-28"))
+
+# Verificar
+head(feriados_chile)

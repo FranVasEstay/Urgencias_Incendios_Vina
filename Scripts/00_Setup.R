@@ -28,7 +28,10 @@ library(jsonlite)  # Para procesar la respuesta JSON de la API
 library(ggspatial)
 library(paletteer)
 library(ggrepel)
-library(conflict) 
+library(scales)
+library(flextable)
+library(officer)
+#library(conflict) 
 
 ## Definir Directorios 
 dir_data   <- here("Datos")

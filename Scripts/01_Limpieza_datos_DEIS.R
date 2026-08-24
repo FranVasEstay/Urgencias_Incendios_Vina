@@ -8,7 +8,7 @@
 
 # DATOS 
 ## 2023
-AtencionesUrgencia2023 <- read_delim("Datos/AtencionesUrgencia2023.csv",
+AtencionesUrgencia2023 <- read_delim("Datos/Raw/DEIS/AtencionesUrgencia2023.csv",
                                      delim = ";",
                                      escape_double = FALSE,
                                      trim_ws = TRUE,
@@ -17,7 +17,7 @@ AtencionesUrgencia2023 <- read_delim("Datos/AtencionesUrgencia2023.csv",
   filter(CodigoRegion == 5)
 
 ## 2024
-AtencionesUrgencia2024 <- read_delim("Datos/AtencionesUrgencia2024.csv",
+AtencionesUrgencia2024 <- read_delim("Datos/Raw/DEIS/AtencionesUrgencia2024.csv",
                                      delim = ";",
                                      escape_double = FALSE,
                                      trim_ws = TRUE,
@@ -26,7 +26,7 @@ AtencionesUrgencia2024 <- read_delim("Datos/AtencionesUrgencia2024.csv",
   filter(CodigoRegion == 5)
 
 ## 2025
-AtencionesUrgencia2025 <- read_delim("Datos/AtencionesUrgencia2025.csv",
+AtencionesUrgencia2025 <- read_delim("Datos/Raw/DEIS/AtencionesUrgencia2025.csv",
                                      delim = ";",
                                      escape_double = FALSE,
                                      trim_ws = TRUE,
@@ -107,23 +107,60 @@ causas_salud_mental <- c(
   "Lesiones Autoinflingidas Intencionalmente (Causa Externa X60-X84)",
   "Otros trastornos mentales no contenidos en las categorías anteriores"
 )
-# Quemaduras de humo
-causas_quemaduras_humo <- c(
-  "Lesiones por Quemaduras, exposición al humo, fuego, llamas, contacto con calor y sustancias calientes (Causa Externa X00-X19)"
-)
 
 urgencias_valpo <- urgencias_valpo %>%
   mutate(
     causa_respiratoria   = GlosaCausa %in% causas_respiratorias,
     causa_cardiovascular = GlosaCausa %in% causas_cardiovasculares,
-    causa_salud_mental   = GlosaCausa %in% causas_salud_mental,
-    causa_quemaduras     = GlosaCausa %in% causas_quemaduras_humo
+    causa_salud_mental   = GlosaCausa %in% causas_salud_mental
   )
 
 ## Se va a trabajar mejor con algunas comunas seleccionadas: Valparaíso, Viña del mar, Quilpué, Villa Alemana, Limache, Placilla de Peñuelas.
 selected_comunas <- c("Valparaíso", "Viña del Mar","Quilpué","Villa Alemana","Limache","Concón")
 urgencias_subset <- filter(urgencias_valpo, NombreComuna %in% selected_comunas)
 
+## Guardar datos en formato "unificado"
+urgencias_subset <- urgencias_subset %>%
+  group_by(fecha, NombreComuna, NEstablecimiento, IdEstablecimiento, 
+           GLOSATIPOESTABLECIMIENTO) %>%
+  summarise(
+    # Conteos totales y por grupos de edad (suma sobre todas las causas)
+    Total_conteo                      = sum(Total, na.rm = TRUE),
+    Conteo_pediatricos                = sum(Menores_1 + De_1_a_4 + De_5_a_14, na.rm = TRUE),
+    Conteo_adultos                    = sum(De_15_a_64, na.rm = TRUE),
+    Conteo_adultos_mayores            = sum(De_65_y_mas, na.rm = TRUE),
+    # Conteos por causa específica (suma de Total solo cuando la causa es TRUE)
+    Conteo_respiratorios   = sum(Total[causa_respiratoria], na.rm = TRUE),
+    Conteo_cardiovasculares = sum(Total[causa_cardiovascular], na.rm = TRUE),
+    Conteo_salud_mental    = sum(Total[causa_salud_mental], na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  # Renombrar columnas
+  rename(
+    comuna        = NombreComuna,
+    centro        = NEstablecimiento,
+    id_centro     = IdEstablecimiento,
+    Tipo_Urgencia = GLOSATIPOESTABLECIMIENTO
+  )
+urgencias_subset <- urgencias_subset %>%
+  mutate(
+    Complejidad = case_when(
+      grepl("Hospital|Clínica", Tipo_Urgencia, ignore.case = TRUE) ~ "Hospital",
+      grepl("SAR|SAPU|SUR|PSR|Posta|Consultorio|Centro de Salud", 
+            Tipo_Urgencia, ignore.case = TRUE)                     ~ "APS",
+      TRUE                                                         ~ "Sin clasificar"
+    )
+  )
+# reordenar columnas
+urgencias_subset <- urgencias_subset %>%
+  select(
+    fecha, comuna, centro, id_centro, Tipo_Urgencia, Complejidad,
+    Total_conteo, Conteo_pediatricos, Conteo_adultos, Conteo_adultos_mayores,
+    Conteo_respiratorios, Conteo_cardiovasculares,
+    Conteo_salud_mental
+  )
+
 # GUARDAR DATOS FILTRADOS
 save(urgencias_valpo, file = "Datos/Processed/Urgencias_valpo_limpio.RData") # toda la data
 save(urgencias_subset, file = "Datos/Processed/Urgencias_valpo_selected.RData") #subset comunas seleccionadas
+write.csv(urgencias_subset, file = "Datos/Processed/Urgencias_VALPO_DEIS.csv", row.names = FALSE) 
